@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "cserver.h"
 #include "http.h"
 #include "util.h"
 #define WAY 3
@@ -26,7 +27,7 @@
  * __domain     : AF_INET       - IPv4
  * __type       : SOCK_STREAM   - TCP
  * __protocol   : 0             - Let kernel select corresponding protocol for
- * __type.
+ *                                __type.
  *
  * */
 
@@ -34,7 +35,8 @@
 
 int main(int argc, char *argv[]) {
     // Server
-    int server_sockfd = init_server_sockfd(LISTEN_NUMS);
+    int server_sockfd = init_server("localhost", 8081 ,LISTEN_NUMS);
+
 
 #if WAY == 1
     int pid = 0;

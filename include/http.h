@@ -12,8 +12,10 @@ enum http_status {
 
 void http_request(void *);
 
-void http_parse(const char *);
+static void http_parse(char *, char *);
 
-void http_reply(int);
+static void http_reply(int, const char *);
+
+static void http_reply_err(int);
 
 #endif

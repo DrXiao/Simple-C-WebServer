@@ -1,21 +1,29 @@
 # C compiler options
 CC := c99
-FLAG = -g -O0 -o 
+CFLAG = -g -O0
 MAIN := server
-SRC := src
-INCLUDE := include
-HEADER := header
+SRC_DIR := src
+TARGET_DIR := obj
+INCLUDE_DIR := include
 
 # OS env
-MK := touch
 RM := rm
+MKDIR := mkdir
 
-build:
-	$(CC) $(FLAG) $(MAIN) $(SRC)/* -I$(INCLUDE) -lpthread
+DEPS = $(patsubst $(SRC_DIR)/%.c, $(TARGET_DIR)/%.o, $(wildcard $(SRC_DIR)/*.c))
 
-mkhdr:
-	$(MK) $(INCLUDE)/$(HEADER).h
+build: $(TARGET_DIR) $(MAIN)
+
+$(TARGET_DIR):
+	$(MKDIR) $(TARGET_DIR)
+
+$(TARGET_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAG) -o $@ $^ -c -I$(INCLUDE_DIR)
+
+$(MAIN): $(DEPS)
+	$(CC) -o $@ $^ -lpthread
+
 
 clean:
-	$(RM) $(MAIN)
-	
+	$(RM) -rf $(TARGET_DIR)
+	$(RM) $(MAIN)	
