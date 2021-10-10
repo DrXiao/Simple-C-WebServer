@@ -32,5 +32,7 @@ int init_server(const char *ip, uint16_t port, int listen_nums) {
                       sizeof(server_info)));
     handle_error(listen(server_sockfd, listen_nums));
 
+    printf( "* Server runs on http://%s:%d\n"
+            "* Press Ctrl + C to exit\n", ip, port);
     return server_sockfd;
 }

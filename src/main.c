@@ -48,10 +48,7 @@ int main(int argc, char *argv[]) {
 #endif
     int client_sockfd = 0;
     struct sockaddr_in client_info;
-    int addrlen = sizeof(client_info);
-
-    printf("Server run ...\n"
-           "press Ctrl + C to exit...\n");
+    socklen_t addrlen = sizeof(client_info);
 
     while (true) {
         handle_error((client_sockfd =

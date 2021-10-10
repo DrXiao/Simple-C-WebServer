@@ -1,6 +1,6 @@
 # C compiler options
 CC := c99
-CFLAG = -g -O0
+CFLAG = -g -O0 -Wall
 MAIN := server
 SRC_DIR := src
 TARGET_DIR := obj
