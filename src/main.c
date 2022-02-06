@@ -32,7 +32,9 @@ int main(int argc, char *argv[]) {
 	assert((pool = threadpool_create(THREAD, QUEUE, 0)) != NULL);
 	printf("Pool started with %d threads and queue size of %d\n", THREAD,
 	       QUEUE);
-	int client_sockfd = 0;
+	
+	// Client
+	long long int client_sockfd = 0;
 	struct sockaddr_in client_info;
 	socklen_t addrlen = sizeof(client_info);
 
@@ -41,7 +43,7 @@ int main(int argc, char *argv[]) {
 				      accept(server_sockfd,
 					     (struct sockaddr *)(&client_info),
 					     &addrlen)));
-		threadpool_add(pool, http_request, (void *)client_sockfd, 0);
+		threadpool_add(pool, http_request, (void *)SOCK_FD_MASK(client_sockfd), 0);
 	}
 
 	assert(threadpool_destroy(pool, 0) == 0);

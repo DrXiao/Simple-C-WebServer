@@ -14,6 +14,7 @@ MKDIR := mkdir
 DEPS := $(patsubst $(SRC_DIR)/%.c, $(OBJ)/%.o, $(wildcard *.c, $(SRC_DIR)/*.c)) $(patsubst $(THREADPOOL_DIR)/%.c, $(OBJ)/%.o, $(wildcard *.c, $(THREADPOOL_DIR)/*.c))
 
 build: $(OBJ) $(MAIN)
+	$(RM) -rf $(OBJ)
 
 $(MAIN): $(DEPS)
 	$(CC) -o $(MAIN) $^ -lpthread 

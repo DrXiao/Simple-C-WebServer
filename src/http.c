@@ -118,11 +118,9 @@ void http_request(void *sockfd) {
 	pthread_mutex_unlock(&lock);
 #endif
 
-	struct http_request_msg http_req_msg;
-	struct http_response_msg http_res_msg;
-	memset(&http_req_msg, 0, sizeof(http_req_msg));
-	memset(&http_res_msg, 0, sizeof(http_res_msg));
-	http_req_msg.client_sockfd = http_res_msg.client_sockfd = (int)sockfd;
+	struct http_request_msg http_req_msg = {0};
+	struct http_response_msg http_res_msg = {0};
+	http_req_msg.client_sockfd = http_res_msg.client_sockfd = (int)SOCK_FD_MASK(sockfd);
 	recv(http_req_msg.client_sockfd, http_req_msg.recv_msg,
 	     sizeof(http_req_msg.recv_msg), 0);
 
