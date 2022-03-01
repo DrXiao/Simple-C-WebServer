@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include "http.h"
 #include "util.h"
 #define DEFAULT_PORT 8081
@@ -14,10 +15,11 @@ int init_server(const char *ip, uint16_t port, int listen_nums) {
 	int server_sockfd = 0;
 	in_addr_t server_ip = 0;
 
-	if (!strcmp(ip, "") || !strcmp(ip, "localhost") ||
-	    !strcmp(ip, "127.0.0.1"))
+	if (!strcmp(ip, "") || !strcmp(ip, "localhost"))
 		server_ip = INADDR_LOOPBACK;
-
+	else
+		server_ip = inet_addr(ip);
+	
 	if (port == 0)
 		port = DEFAULT_PORT;
 

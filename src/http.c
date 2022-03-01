@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include "http.h"
 #include "util.h"
-#define MAXLEN 8192 + 4
+#define MAXLEN 8192
 #define MAX_FILE_NAME_LEN 64
 #define HTTP_VER "HTTP/1.1" /* HTTP Start Line */
 
@@ -46,7 +46,7 @@ struct http_status_table {
 	const char *status_name;
 };
 
-struct http_request_msg {
+struct http_req_msg {
 	int client_sockfd;
 	char recv_msg[MAXLEN];
 	char *request_line, *header, *body;
@@ -56,7 +56,7 @@ struct http_request_msg {
 	// Request header
 };
 
-struct http_response_msg {
+struct http_res_msg {
 	int client_sockfd;
 	struct http_status_table *status;
 	char filename[MAX_FILE_NAME_LEN];
@@ -72,8 +72,18 @@ struct mime_type {
 	const char *value;
 };
 
-static char *file_dir = "www";
-static char *homepage = "index.html";
+enum setting_option {
+	FDIR = 0,
+	HOMEPAGE = 1
+};
+
+static struct setting {
+	char *key;
+	char *val;
+} default_settings[] = {
+	{"fdir", "www"},
+	{"homepage", "index.html"}
+};
 
 static struct http_status_table http_status_table[] = {
 	{HTTP_OK, "OK"},
@@ -85,30 +95,34 @@ static struct mime_type mime_type[] = {{".html", "text/html"},
 				       {".json", "application/json"},
 				       {NULL, "text/plain"}};
 
-static void http_parse(struct http_request_msg *, struct http_response_msg *);
+static void http_parse(struct http_req_msg *, struct http_res_msg *);
 
-static void http_parse_request_line(struct http_request_msg *,
-				    struct http_response_msg *);
+static void http_parse_request_line(struct http_req_msg *,
+				    struct http_res_msg *);
 
-static void http_parse_request_header(struct http_request_msg *,
-				      struct http_response_msg *);
+static void http_parse_request_header(struct http_req_msg *,
+				      struct http_res_msg *);
 
-static void http_parse_request_body(struct http_request_msg *,
-				    struct http_response_msg *);
+static void http_parse_request_body(struct http_req_msg *,
+				    struct http_res_msg *);
 
-static void http_reply(struct http_response_msg *);
+static void http_reply(struct http_res_msg *);
 
-static void http_reply_err(struct http_response_msg *);
+static void http_reply_err(struct http_res_msg *);
 
 #if DEBUG == 1
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static int requests = 0;
 #endif
 
-void parse_arg(char *arg) {
+static void parse_arg(char *arg) {
+	printf("%s\n", arg);
 }
 
 void init_http_settings(int argc, char **argv) {
+	for (int i = 1; i < argc; i++) {
+		parse_arg(argv[i]);
+	}
 }
 
 void http_request(void *sockfd) {
@@ -118,8 +132,8 @@ void http_request(void *sockfd) {
 	pthread_mutex_unlock(&lock);
 #endif
 
-	struct http_request_msg http_req_msg = {0};
-	struct http_response_msg http_res_msg = {0};
+	struct http_req_msg http_req_msg = {0};
+	struct http_res_msg http_res_msg = {0};
 	http_req_msg.client_sockfd = http_res_msg.client_sockfd = (int)SOCK_FD_MASK(sockfd);
 	recv(http_req_msg.client_sockfd, http_req_msg.recv_msg,
 	     sizeof(http_req_msg.recv_msg), 0);
@@ -137,8 +151,8 @@ close:
 	close(http_req_msg.client_sockfd);
 }
 
-static void http_parse(struct http_request_msg *http_req_msg,
-		       struct http_response_msg *http_res_msg) {
+static void http_parse(struct http_req_msg *http_req_msg,
+		       struct http_res_msg *http_res_msg) {
 	char *parser = http_req_msg->recv_msg;
 
 	http_req_msg->request_line = parser;
@@ -154,8 +168,8 @@ static void http_parse(struct http_request_msg *http_req_msg,
 	http_parse_request_body(http_req_msg, http_res_msg);
 }
 
-static void http_parse_request_line(struct http_request_msg *http_req_msg,
-				    struct http_response_msg *http_res_msg) {
+static void http_parse_request_line(struct http_req_msg *http_req_msg,
+				    struct http_res_msg *http_res_msg) {
 	char *method = NULL, *uri = NULL, *http_ver = NULL, *parser = NULL;
 
 	parser = http_req_msg->request_line;
@@ -179,11 +193,11 @@ static void http_parse_request_line(struct http_request_msg *http_req_msg,
 	else if (!strncmp(method, "HEAD", 4))
 		http_req_msg->method = HTTP_HEAD;
 
-	strcat(http_res_msg->filename, file_dir);
+	strcat(http_res_msg->filename, default_settings[FDIR].val);
 	strncat(http_res_msg->filename, uri, (size_t)(http_ver - uri) - 1);
 
 	if (!strncmp(uri, "/", (size_t)(http_ver - uri) - 1))
-		strcat(http_res_msg->filename, homepage);
+		strcat(http_res_msg->filename, default_settings[HOMEPAGE].val);
 
 	int mime_idx = 0;
 	for (; mime_idx < sizeof(mime_type) / sizeof(struct mime_type) - 1;
@@ -198,19 +212,19 @@ static void http_parse_request_line(struct http_request_msg *http_req_msg,
 		http_req_msg->http_ver = HTTP_VER;
 }
 
-static void http_parse_request_header(struct http_request_msg *http_req_msg,
-				      struct http_response_msg *http_res_msg) {
+static void http_parse_request_header(struct http_req_msg *http_req_msg,
+				      struct http_res_msg *http_res_msg) {
 	printf("%s\n", http_req_msg->header);
 }
 
-static void http_parse_request_body(struct http_request_msg *http_req_msg,
-				    struct http_response_msg *http_res_msg) {
+static void http_parse_request_body(struct http_req_msg *http_req_msg,
+				    struct http_res_msg *http_res_msg) {
 	if (http_req_msg->method == HTTP_POST) {
 		printf("%s\n", http_req_msg->body);
 	}
 }
 
-static void http_reply(struct http_response_msg *http_res_msg) {
+static void http_reply(struct http_res_msg *http_res_msg) {
 
 	if (stat(http_res_msg->filename, &http_res_msg->file_stat) < 0) {
 		printf("File: (%s) Not Found\n", http_res_msg->filename);
@@ -257,7 +271,7 @@ reply_end:
 	return;
 }
 
-static void http_reply_err(struct http_response_msg *http_res_msg) {
+static void http_reply_err(struct http_res_msg *http_res_msg) {
 
 	snprintf(http_res_msg->body, sizeof(http_res_msg->body),
 		 "<html>"
