@@ -11,9 +11,6 @@
 #include "http.h"
 #include "util.h"
 #include "threadpool.h"
-#define LISTEN_NUMS 1024
-#define THREAD 32
-#define QUEUE 1024
 /*
  * socket(int __domain, int __type, int __protocol)
  * __domain     : AF_INET       - IPv4
@@ -25,9 +22,8 @@
 
 int main(int argc, char *argv[]) {
 	// Server
-	init_http_settings(argc, argv);
-	int server_sockfd = init_server("localhost", 8081, LISTEN_NUMS);
-
+	int server_sockfd = init_http_settings(argc, argv);
+	 
 	threadpool_t *pool;
 	assert((pool = threadpool_create(THREAD, QUEUE, 0)) != NULL);
 	printf("Pool started with %d threads and queue size of %d\n", THREAD,

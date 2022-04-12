@@ -1,6 +1,6 @@
 # C compiler options
-CC := c99
-CFLAG = -g -O0 -c -Wall
+CC := gcc
+CFLAG = -g -O0 -c -Wall -std=c99 -pedantic-errors
 MAIN := cserver
 SRC_DIR := src
 OBJ := obj

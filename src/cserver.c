@@ -9,23 +9,19 @@
 #include <arpa/inet.h>
 #include "http.h"
 #include "util.h"
-#define DEFAULT_PORT 8081
 
 int init_server(const char *ip, uint16_t port, int listen_nums) {
 	int server_sockfd = 0;
 	in_addr_t server_ip = 0;
 
 	if (!strcmp(ip, "") || !strcmp(ip, "localhost"))
-		server_ip = INADDR_LOOPBACK;
+		server_ip = htonl(INADDR_LOOPBACK);
 	else
 		server_ip = inet_addr(ip);
-	
-	if (port == 0)
-		port = DEFAULT_PORT;
 
 	struct sockaddr_in server_addr = {0};
 	server_addr.sin_family = PF_INET;
-	server_addr.sin_addr.s_addr = htonl(server_ip);
+	server_addr.sin_addr.s_addr = server_ip;
 	server_addr.sin_port = htons(port);
 
 	int reuse = 1;

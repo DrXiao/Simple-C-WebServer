@@ -3,7 +3,7 @@
 #include <pthread.h>
 #define SERVER_NAME "CServer"
 
-void init_http_settings(int, char **);
+int init_http_settings(int, char **);
 
 void http_request(void *);
 

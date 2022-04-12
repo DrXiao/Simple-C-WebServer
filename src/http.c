@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include "cserver.h"
 #include "http.h"
 #include "util.h"
 #define MAXLEN 8192
@@ -52,7 +53,7 @@ struct http_req_msg {
 	char *request_line, *header, *body;
 	// Request line
 	int method;
-	const char *http_ver;
+	char *http_ver;
 	// Request header
 };
 
@@ -73,16 +74,28 @@ struct mime_type {
 };
 
 enum setting_option {
-	FDIR = 0,
-	HOMEPAGE = 1
+	IP = 0,
+	PORT = 1,
+	FDIR = 2,
+	HOMEPAGE = 3
 };
+
+#define SETTINGS(FIELD) server_settings[FIELD].val
 
 static struct setting {
 	char *key;
-	char *val;
-} default_settings[] = {
+	char val[1024];
+} server_settings[] = {
+	{"ip", "localhost"},
+	{"port", "8081"},
 	{"fdir", "www"},
 	{"homepage", "index.html"}
+};
+
+enum http_status_idx{
+	OK_IDX,
+	NOT_MODIFIED_IDX,
+	NOT_FOUND_IDX
 };
 
 static struct http_status_table http_status_table[] = {
@@ -106,7 +119,7 @@ static void http_parse_request_header(struct http_req_msg *,
 static void http_parse_request_body(struct http_req_msg *,
 				    struct http_res_msg *);
 
-static void http_reply(struct http_res_msg *);
+static void http_reply(struct http_req_msg *, struct http_res_msg *);
 
 static void http_reply_err(struct http_res_msg *);
 
@@ -116,13 +129,19 @@ static int requests = 0;
 #endif
 
 static void parse_arg(char *arg) {
-	printf("%s\n", arg);
+	for (int i = 0; i < sizeof(server_settings) / sizeof(struct setting); i++) {
+		if (strstr(arg, server_settings[i].key) != NULL) {
+			sscanf(arg, "--%*[A-Za-z]=%s", server_settings[i].val);
+		}
+	}
 }
 
-void init_http_settings(int argc, char **argv) {
+int init_http_settings(int argc, char **argv) {
 	for (int i = 1; i < argc; i++) {
 		parse_arg(argv[i]);
 	}
+	int server_sockfd = init_server(SETTINGS(IP), atoi(SETTINGS(PORT)), LISTEN_NUMS);
+	return server_sockfd;
 }
 
 void http_request(void *sockfd) {
@@ -144,10 +163,10 @@ void http_request(void *sockfd) {
 		goto close;
 	}
 	http_parse(&http_req_msg, &http_res_msg);
-	http_reply(&http_res_msg);
+	http_reply(&http_req_msg, &http_res_msg);
 
 close:
-	shutdown(http_req_msg.client_sockfd, SHUT_RDWR);
+	shutdown((int)SOCK_FD_MASK(sockfd), SHUT_RDWR);
 	close(http_req_msg.client_sockfd);
 }
 
@@ -193,11 +212,11 @@ static void http_parse_request_line(struct http_req_msg *http_req_msg,
 	else if (!strncmp(method, "HEAD", 4))
 		http_req_msg->method = HTTP_HEAD;
 
-	strcat(http_res_msg->filename, default_settings[FDIR].val);
+	strcat(http_res_msg->filename, server_settings[FDIR].val);
 	strncat(http_res_msg->filename, uri, (size_t)(http_ver - uri) - 1);
 
 	if (!strncmp(uri, "/", (size_t)(http_ver - uri) - 1))
-		strcat(http_res_msg->filename, default_settings[HOMEPAGE].val);
+		strcat(http_res_msg->filename, server_settings[HOMEPAGE].val);
 
 	int mime_idx = 0;
 	for (; mime_idx < sizeof(mime_type) / sizeof(struct mime_type) - 1;
@@ -224,17 +243,17 @@ static void http_parse_request_body(struct http_req_msg *http_req_msg,
 	}
 }
 
-static void http_reply(struct http_res_msg *http_res_msg) {
+static void http_reply(struct http_req_msg *http_req_msg, struct http_res_msg *http_res_msg) {
 
 	if (stat(http_res_msg->filename, &http_res_msg->file_stat) < 0) {
-		printf("File: (%s) Not Found\n", http_res_msg->filename);
-		http_res_msg->status = http_status_table + 2;
+		fprintf(stderr, "File: (%s) Not Found\n", http_res_msg->filename);
+		http_res_msg->status = http_status_table + NOT_FOUND_IDX;
 		http_res_msg->mime = mime_type;
 		http_reply_err(http_res_msg);
 		goto reply_end;
 	}
 
-	http_res_msg->status = http_status_table;
+	http_res_msg->status = http_status_table + OK_IDX;
 
 	strftime(http_res_msg->file_mtime, sizeof(http_res_msg->file_mtime),
 		 "%a, %d %b %Y %H:%M:%S GMT",
@@ -257,7 +276,7 @@ static void http_reply(struct http_res_msg *http_res_msg) {
 	send(http_res_msg->client_sockfd, http_res_msg->header,
 	     strlen(http_res_msg->header), MSG_NOSIGNAL);
 
-	if (http_res_msg->status->status_code == HTTP_HEAD)
+	if (http_req_msg->method == HTTP_HEAD)
 		goto reply_end;
 
 	int file_fd = open(http_res_msg->filename, O_RDONLY, 0);
