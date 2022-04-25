@@ -19,34 +19,6 @@
 #include <pthread.h>
 #endif
 
-enum http_status {
-	HTTP_CONTINUE = 100,
-	HTTP_OK = 200,
-	HTTP_NO_CONTENT = 204,
-	HTTP_MOVED_PERMANENTLY = 301,
-	HTTP_FOUND_MOVED_TEMPORARILY = 302,
-	HTTP_NOT_MODIFIED = 304,
-	HTTP_BAD_REQUEST = 400,
-	HTTP_UNAUTHORIZED = 401,
-	HTTP_FORBIDDEN = 403,
-	HTTP_NOT_FOUND = 404,
-	HTTP_INTERNAL_SERVER_ERROR = 500,
-	HTTP_NOT_IMPLEMENTED = 501,
-	HTTP_BAD_GATEWAY = 502
-};
-
-enum http_request_method {
-	HTTP_UNKNOWN = 0x0,
-	HTTP_GET = 0x1,
-	HTTP_POST = 0x2,
-	HTTP_HEAD = 0x4
-};
-
-struct http_status_table {
-	uint16_t status_code;
-	const char *status_name;
-};
-
 struct http_req_msg {
 	int client_sockfd;
 	char recv_msg[MAXLEN];
@@ -55,6 +27,7 @@ struct http_req_msg {
 	int method;
 	char *http_ver;
 	// Request header
+	struct list_head *headers;
 };
 
 struct http_res_msg {
@@ -66,11 +39,6 @@ struct http_res_msg {
 	struct mime_type *mime;
 	char header[MAXLEN];
 	char body[MAXLEN];
-};
-
-struct mime_type {
-	const char *type;
-	const char *value;
 };
 
 enum setting_option {
@@ -233,7 +201,8 @@ static void http_parse_request_line(struct http_req_msg *http_req_msg,
 
 static void http_parse_request_header(struct http_req_msg *http_req_msg,
 				      struct http_res_msg *http_res_msg) {
-	printf("%s\n", http_req_msg->header);
+	char header_field[32], header_val[1024];
+	
 }
 
 static void http_parse_request_body(struct http_req_msg *http_req_msg,
