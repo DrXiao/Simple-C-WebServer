@@ -72,6 +72,10 @@ static struct http_status_table http_status_table[] = {
 	{HTTP_NOT_FOUND, "Not Found"},
 };
 
+struct mime_type {
+	const char *type, *value;
+};
+
 static struct mime_type mime_type[] = {{".html", "text/html"},
 				       {".json", "application/json"},
 				       {NULL, "text/plain"}};
