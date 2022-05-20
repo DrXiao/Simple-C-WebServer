@@ -17,7 +17,6 @@
  * __type       : SOCK_STREAM   - TCP
  * __protocol   : 0             - Let kernel select corresponding protocol for
  *                                __type.
- *
  * */
 
 int main(int argc, char *argv[]) {

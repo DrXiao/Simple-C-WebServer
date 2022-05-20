@@ -26,6 +26,7 @@ struct http_req_msg {
 	// Request line
 	int method;
 	char *http_ver;
+
 	// Request header
 	struct list_head *headers;
 };
@@ -103,7 +104,8 @@ static int requests = 0;
 static void parse_arg(char *arg) {
 	for (int i = 0; i < sizeof(server_settings) / sizeof(struct setting); i++) {
 		if (strstr(arg, server_settings[i].key) != NULL) {
-			sscanf(arg, "--%*[A-Za-z]=%s", server_settings[i].val);
+			sscanf(arg, "%*[A-Za-z]=%s", server_settings[i].val);
+			return;
 		}
 	}
 }
@@ -134,6 +136,7 @@ void http_request(void *sockfd) {
 		       http_req_msg.client_sockfd);
 		goto close;
 	}
+
 	http_parse(&http_req_msg, &http_res_msg);
 	http_reply(&http_req_msg, &http_res_msg);
 
@@ -148,11 +151,8 @@ static void http_parse(struct http_req_msg *http_req_msg,
 
 	http_req_msg->request_line = parser;
 
-	parser = strstr(http_req_msg->recv_msg, "\r\n");
-	http_req_msg->header = parser + 2;
-
-	parser = strstr(http_req_msg->recv_msg, "\r\n\r\n");
-	http_req_msg->body = parser + 4;
+	http_req_msg->header = strstr(http_req_msg->recv_msg, "\r\n") + sizeof("\r\n");
+	http_req_msg->body = strstr(http_req_msg->recv_msg, "\r\n\r\n") + sizeof("\r\n\r\n");
 
 	http_parse_request_line(http_req_msg, http_res_msg);
 	http_parse_request_header(http_req_msg, http_res_msg);
