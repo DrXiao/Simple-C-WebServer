@@ -8,3 +8,8 @@
 * System call
 * Realize HTTP request/response
 * Thread pool
+## Build and Run
+```
+$ make
+$ ./cserver
+```
